@@ -81,7 +81,7 @@ Si deseas agregar el servicio de mensajeria sera necesario que incluyas la exten
 ```json
 {
     "status": "error",
-    "code": 0,
+    "error": true,
     "message": ""
 }
 ```

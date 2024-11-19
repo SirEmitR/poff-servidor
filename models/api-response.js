@@ -1,23 +1,24 @@
+
 export default class ApiResponse {
     constructor() {
-      this.status = null;
-      this.data = null;
-      this.meta = null;
-      this.message = null;
-      this.error = null;
+      this.success = this.success.bind(this);
+      this.error = this.error.bind(this)
     }
   
     success(data, message = "", meta = null) {
-      this.status = "success";
-      this.data = data;
-      this.meta = meta;
-      this.message = message;
-      this.error = false;
+      return {
+        status: "success",
+        data: data,
+        message: message,
+        meta: meta,
+      };
     }
   
-    failure(message) {
-      this.status = "error";
-      this.message = message;
-      this.error = true;
+    error(message) {
+      return {
+        status: "error",
+        message: message,
+        error: true,
+      };
     }
   }

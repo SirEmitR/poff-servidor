@@ -7,11 +7,18 @@ import cors from 'cors';
 process.loadEnvFile();
 const app = express();
 const PORT = process.env.PORT || 3100;
-
+/*
+GET /<ruta>               # Obtener todos los usuarios (con paginación)
+POST /<ruta>              # Crear un nuevo usuario
+GET /<ruta>/{id}          # Obtener un usuario específico por ID
+PUT /<ruta>/{id}          # Actualizar un usuario completo
+PATCH /<ruta>/{id}        # Actualizar parcialmente un usuario
+DELETE /<ruta>/{id}       # Eliminar un usuario
+ */
 app.use(express.json());
 const corsOptions = {
     origin: 'http://localhost:3000', // Permitir solo este dominio
-    methods: 'GET,POST,PUT,DELETE', // Métodos permitidos
+    methods: 'GET,POST,PUT,PATCH,DELETE', // Métodos permitidos
     allowedHeaders: 'Content-Type,Authorization', // Encabezados permitidos
     credentials: true // Permitir credenciales
   };
@@ -26,7 +33,7 @@ fs.readdirSync(routesPath).forEach((versionFolder) => {
     if (fs.lstatSync(versionPath).isDirectory()) {
         fs.readdirSync(versionPath).forEach((file) => {
             if (file.endsWith('.js')) {
-                const route = `/api/${versionFolder}/${file.replace('.js', '')}`;
+                const route = `/${versionFolder}/${file.replace('.js', '')}`;
                 const modulePath = pathToFileURL(path.join(versionPath, file)).href;
                 import(modulePath).then((module) => {
                     app.use(route, module.default);
