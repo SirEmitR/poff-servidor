@@ -1,22 +1,17 @@
 import database from "../../connections/database.js";
 import { uploadFile } from "../../utils/file.js";
 import sharp from "sharp";
+import ApiResponse from "../../models/api-response.js";
+import normalize from "../../utils/normalize.js";
 
 // Description: Controlador para la gestión de usuarios.
 async function verUsuarios(req, res) {
     const query = 'SELECT * FROM vw_Poff_Usuario WHERE activo = 1;';
     try{
         const rows = await database.query(query);
-        res.json({
-            data: rows,
-            status: 'Ok'
-        });
+        res.json(new ApiResponse().success(rows));
     }catch(err){
-        res.json({
-            data: [],
-            status: 'Error',
-            error: err
-        });
+        res.json(new ApiResponse().error(err.message));
     }
 }
 
@@ -112,7 +107,7 @@ async function actualizarUsuario(req, res) {
             case 'curp': 
                 query = 'CALL UpdateUserCURP(?, ?);';
                 //Convertir a mayúsculas, eliminar espacios y caracteres especiales
-                fixedData = data.toUpperCase().replace(/\s/g, '');
+                fixedData = normalize(data, true);
                 break;
         }
         const outputResult = await database.query(query, [id, fixedData]);
@@ -155,10 +150,12 @@ async function actualizarFoto(req, res) {
         if(result[0].length === 0){
             throw new Error('No se pudo actualizar la foto');
         }
-        const {success, message} = result[0][0];
+        const {message} = result[0][0];
         res.json({
-            data: [],
-            status: success ? 'Ok' : 'Error',
+            data: {
+                url: url
+            },
+            status: 'Ok',
             message: message
         });
     }catch(err){
