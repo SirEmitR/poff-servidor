@@ -36,53 +36,76 @@ async function validateFranchiseName(req, res){
 }
 
 async function getFranchises(req, res) {
-    // Recoger parámetros del query
-    const { search, maxResults, orderBy } = req.query;
+    const { search, maxResults = 10, orderBy, page = 1 } = req.query;
 
-    // Construcción dinámica de la consulta
+    // Construcción dinámica de las consultas
     let query = 'SELECT * FROM Poff_Franquicias WHERE activo = 1';
+    let totalQuery = 'SELECT COUNT(*) as total FROM Poff_Franquicias WHERE activo = 1';
     const params = [];
+    const totalParams = []; // Parámetros separados para totalQuery
 
     // Filtro de búsqueda (aplica en varios campos)
     if (search) {
         query += ` AND (
             franquicia LIKE ?
-            OR franquicia_normalizado LIKE ?
             OR creador LIKE ?
         )`;
+
+        totalQuery += ` AND (
+            franquicia LIKE ?
+            OR creador LIKE ?
+        )`;
+
         const searchPattern = `%${search}%`;
-        params.push(searchPattern, searchPattern, searchPattern);
+        params.push(searchPattern, searchPattern);
+        totalParams.push(searchPattern, searchPattern); // Asegurarse de usar parámetros separados
     }
 
     // Ordenar
     if (orderBy) {
-        const validColumns = ['franquicia', 'franquicia_normalizado', 'creador', 'fecha_creacion', 'id_tipo_fondo'];
+        const validColumns = ['franquicia', 'creador', 'fecha_creacion'];
         if (validColumns.includes(orderBy)) {
             query += ` ORDER BY ${orderBy}`;
         } else {
-            return res.json(new ApiResponse().error('Invalid orderBy field'));
+            return res.json(new ApiResponse('error', null, 'Invalid orderBy value'));
         }
     }
 
-    // Limitar el número de resultados
-    if (maxResults) {
-        const limit = parseInt(maxResults, 10);
-        if (!isNaN(limit) && limit > 0) {
-            query += ' LIMIT ?';
-            params.push(limit);
-        } else {
-            return res.json(new ApiResponse().error('Invalid maxResults value'));
-        }
+    // Paginación
+    const limit = parseInt(maxResults, 10);
+    const offset = (parseInt(page, 10) - 1) * limit;
+
+    if (!isNaN(limit) && limit > 0) {
+        query += ' LIMIT ? OFFSET ?';
+        params.push(limit, offset);
+    } else {
+        return res.json(new ApiResponse('error', null, 'Invalid maxResults or page value'));
     }
 
     try {
-        // Ejecutar la consulta con parámetros
+        // Ejecutar la consulta principal con paginación
         const rows = await database.query(query, params);
-        res.json(new ApiResponse().success(rows));
+
+        // Ejecutar la consulta para el total de registros (sin paginación)
+        const [{ total }] = await database.query(totalQuery, totalParams);
+        const totalRecords = Number(total);
+
+        // Calcular metadatos
+        const hasMore = totalRecords > (parseInt(page, 10) * limit);
+        const meta = {
+            total: totalRecords,
+            hasMore,
+            totalPages: Math.ceil(totalRecords / limit),
+            currentPage: parseInt(page, 10),
+        };
+
+        // Respuesta final
+        res.json(new ApiResponse('success', rows, 'Franchises found', meta));
     } catch (err) {
-        res.json(new ApiResponse().error(err.message));
+        res.json(new ApiResponse('error', null, err.message));
     }
 }
+
 
 
 export default {

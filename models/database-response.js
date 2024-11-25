@@ -5,6 +5,7 @@ export default class DatabaseResponse {
     this.rows = rows;
     this.isArrayOfRows = isArrayOfRows;
     this.error = error;
+    this.metadata = null;
   }
 
   get data() {
@@ -12,9 +13,13 @@ export default class DatabaseResponse {
       return new ApiResponse().error(this.error);
     }
     if(this.isArrayOfRows) {
-      return new ApiResponse().success(this.rows, { total: this.rows.length });
+      return new ApiResponse().success(this.rows, '', this.metadata);
     }else{
       return new ApiResponse().success(this.rows[0][0]);
     }
+  }
+
+  set setMetadata(value) {
+    this.metadata = value;
   }
 }
