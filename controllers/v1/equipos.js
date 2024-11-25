@@ -35,7 +35,58 @@ async function validateFranchiseName(req, res){
     }
 }
 
+async function getFranchises(req, res) {
+    // Recoger parámetros del query
+    const { search, maxResults, orderBy } = req.query;
+
+    // Construcción dinámica de la consulta
+    let query = 'SELECT * FROM Poff_Franquicias WHERE activo = 1';
+    const params = [];
+
+    // Filtro de búsqueda (aplica en varios campos)
+    if (search) {
+        query += ` AND (
+            franquicia LIKE ?
+            OR franquicia_normalizado LIKE ?
+            OR creador LIKE ?
+        )`;
+        const searchPattern = `%${search}%`;
+        params.push(searchPattern, searchPattern, searchPattern);
+    }
+
+    // Ordenar
+    if (orderBy) {
+        const validColumns = ['franquicia', 'franquicia_normalizado', 'creador', 'fecha_creacion', 'id_tipo_fondo'];
+        if (validColumns.includes(orderBy)) {
+            query += ` ORDER BY ${orderBy}`;
+        } else {
+            return res.json(new ApiResponse().error('Invalid orderBy field'));
+        }
+    }
+
+    // Limitar el número de resultados
+    if (maxResults) {
+        const limit = parseInt(maxResults, 10);
+        if (!isNaN(limit) && limit > 0) {
+            query += ' LIMIT ?';
+            params.push(limit);
+        } else {
+            return res.json(new ApiResponse().error('Invalid maxResults value'));
+        }
+    }
+
+    try {
+        // Ejecutar la consulta con parámetros
+        const rows = await database.query(query, params);
+        res.json(new ApiResponse().success(rows));
+    } catch (err) {
+        res.json(new ApiResponse().error(err.message));
+    }
+}
+
+
 export default {
+    getFranchises,
     createFranchise,
     validateFranchiseName
 };
